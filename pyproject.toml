@@ -1,0 +1,20 @@
+[tool.black]
+line-length = 119
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 119
+target-version = "py312"
+exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "DJ", "B"]  # pyflakes, pycodestyle, isort, django, bugbear
+ignore = ["DJ001"]  # null=True sur CharField : on l'utilise volontairement pour distinguer "vide" de "non renseigné"
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "config", "core"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["test_*.py", "*_test.py"]
+addopts = "--reuse-db --cov=apps --cov=core --cov-report=term-missing"
