@@ -7,7 +7,15 @@ d'environnement (voir .env.example à la racine).
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+# Charge le fichier .env à la racine du projet dans os.environ.
+# Sans ça, un lancement local (venv, hors Docker) ignore silencieusement le
+# .env et retombe sur les valeurs par défaut ci-dessous — ce qui a causé une
+# connexion silencieuse au mauvais PostgreSQL (natif au lieu du conteneur).
+load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "insecure-dev-key-change-me")
 
@@ -20,6 +28,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
+    "rest_framework_simplejwt.token_blacklist",
     "django_celery_results",
     # Modules métier — un module = un bounded context (§ architecture)
     "apps.accounts",
@@ -94,6 +103,16 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
 }
 
+from datetime import timedelta  # noqa: E402
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=8),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": True,
+}
+
 # --- Celery : bus de tâches asynchrones (rapports, notifications, KPI lourds) ---
 CELERY_BROKER_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = "django-db"
@@ -108,6 +127,11 @@ CACHES = {
         "LOCATION": os.environ.get("REDIS_URL", "redis://localhost:6379/1"),
     }
 }
+
+# Seuil de mortalité journalière (%) au-delà duquel une alerte biosécurité
+# est automatiquement créée (§5 : "signaler immédiatement toute mortalité
+# inhabituelle"). Ajustable par ferme sans toucher au code.
+SEUIL_ALERTE_MORTALITE_PCT = float(os.environ.get("SEUIL_ALERTE_MORTALITE_PCT", "5.0"))
 
 LANGUAGE_CODE = "fr-fr"
 TIME_ZONE = "UTC"
