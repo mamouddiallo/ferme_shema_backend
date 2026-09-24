@@ -128,6 +128,11 @@ CACHES = {
     }
 }
 
+# Seuil de mortalité journalière (%) au-delà duquel une alerte biosécurité
+# est automatiquement créée (§5 : "signaler immédiatement toute mortalité
+# inhabituelle"). Ajustable par ferme sans toucher au code.
+SEUIL_ALERTE_MORTALITE_PCT = float(os.environ.get("SEUIL_ALERTE_MORTALITE_PCT", "5.0"))
+
 LANGUAGE_CODE = "fr-fr"
 TIME_ZONE = "UTC"
 USE_I18N = True

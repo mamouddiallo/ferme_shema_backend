@@ -1,7 +1,10 @@
+from django.conf import settings
 from django.db.models import Sum
 from rest_framework import serializers
 
+from apps.elevage.events import MortaliteAnormaleDetectee
 from apps.elevage.models import BandeChair, BandePondeuse, StatutBande, SuiviChair, SuiviPondeuse
+from core.events import BusEvenements
 
 
 class BandePondeuseSerializer(serializers.ModelSerializer):
@@ -82,7 +85,25 @@ class SuiviPondeuseSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data["saisi_par"] = self.context["request"].user
-        return super().create(validated_data)
+        instance = super().create(validated_data)
+        self._alerter_si_mortalite_anormale(instance)
+        return instance
+
+    def _alerter_si_mortalite_anormale(self, instance):
+        if instance.effectif_debut <= 0:
+            return
+        taux = (instance.mortalite / instance.effectif_debut) * 100
+        if taux > settings.SEUIL_ALERTE_MORTALITE_PCT:
+            BusEvenements.publier(
+                MortaliteAnormaleDetectee(
+                    type_bande="pondeuse",
+                    bande_id=instance.bande_id,
+                    date_suivi=str(instance.date_suivi),
+                    taux_mortalite_pct=round(taux, 2),
+                    mortalite=instance.mortalite,
+                    effectif_debut=instance.effectif_debut,
+                )
+            )
 
 
 class BandeChairSerializer(serializers.ModelSerializer):
@@ -167,4 +188,29 @@ class SuiviChairSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data["saisi_par"] = self.context["request"].user
-        return super().create(validated_data)
+        instance = super().create(validated_data)
+        self._alerter_si_mortalite_anormale(instance)
+        return instance
+
+    def _alerter_si_mortalite_anormale(self, instance):
+        mortalite_anterieure = (
+            SuiviChair.objects.filter(bande=instance.bande, date_suivi__lt=instance.date_suivi)
+            .exclude(id=instance.id)
+            .aggregate(total=Sum("mortalite"))["total"]
+            or 0
+        )
+        effectif_avant_ce_jour = instance.bande.effectif_initial - mortalite_anterieure
+        if effectif_avant_ce_jour <= 0:
+            return
+        taux = (instance.mortalite / effectif_avant_ce_jour) * 100
+        if taux > settings.SEUIL_ALERTE_MORTALITE_PCT:
+            BusEvenements.publier(
+                MortaliteAnormaleDetectee(
+                    type_bande="chair",
+                    bande_id=instance.bande_id,
+                    date_suivi=str(instance.date_suivi),
+                    taux_mortalite_pct=round(taux, 2),
+                    mortalite=instance.mortalite,
+                    effectif_debut=effectif_avant_ce_jour,
+                )
+            )
