@@ -83,6 +83,39 @@ class TestCreationVente:
         assert float(response.data["montant_total"]) == 45000.0
         assert float(response.data["solde"]) == 0.0
 
+    def test_date_vente_peut_etre_renseignee_retroactivement(self, api_client, gestionnaire, client_resto):
+        """Un comptable doit pouvoir saisir une vente d'hier, pas seulement celles du jour même."""
+        api_client.force_authenticate(user=gestionnaire)
+        response = api_client.post(
+            "/api/ventes/ventes/",
+            {
+                "client": str(client_resto.id),
+                "date_vente": "2026-09-01T09:00:00Z",
+                "mode_paiement": "especes",
+                "montant_encaisse": "45000",
+                "lignes": [{"produit": "Plateau 30 œufs", "quantite": 15, "prix_unitaire": "3000"}],
+            },
+            format="json",
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["date_vente"].startswith("2026-09-01")
+
+    def test_date_vente_par_defaut_est_maintenant(self, api_client, gestionnaire, client_resto):
+        from django.utils import timezone
+
+        api_client.force_authenticate(user=gestionnaire)
+        response = api_client.post(
+            "/api/ventes/ventes/",
+            {
+                "client": str(client_resto.id),
+                "mode_paiement": "especes",
+                "montant_encaisse": "45000",
+                "lignes": [{"produit": "Plateau 30 œufs", "quantite": 15, "prix_unitaire": "3000"}],
+            },
+            format="json",
+        )
+        assert response.data["date_vente"].startswith(str(timezone.now().date()))
+
     def test_vente_sans_ligne_est_rejetee(self, api_client, gestionnaire, client_resto):
         api_client.force_authenticate(user=gestionnaire)
         response = api_client.post(

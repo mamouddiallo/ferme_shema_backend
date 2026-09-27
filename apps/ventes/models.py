@@ -3,6 +3,7 @@ import uuid
 from django.conf import settings
 from django.db import models
 from django.db.models import F
+from django.utils import timezone
 
 
 class TypeClient(models.TextChoices):
@@ -46,7 +47,7 @@ class Vente(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     client = models.ForeignKey(Client, on_delete=models.PROTECT, related_name="ventes", blank=True, null=True)
     utilisateur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
-    date_vente = models.DateTimeField(auto_now_add=True)
+    date_vente = models.DateTimeField(default=timezone.now)
     mode_paiement = models.CharField(max_length=20, choices=ModePaiement.choices)
     montant_total = models.DecimalField(max_digits=12, decimal_places=2)
     montant_encaisse = models.DecimalField(max_digits=12, decimal_places=2, default=0)

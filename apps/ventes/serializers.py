@@ -49,7 +49,7 @@ class VenteSerializer(serializers.ModelSerializer):
             "lignes",
             "created_at",
         ]
-        read_only_fields = ["id", "utilisateur", "montant_total", "date_vente", "created_at"]
+        read_only_fields = ["id", "utilisateur", "montant_total", "created_at"]
 
     def validate(self, attrs):
         if self.instance is None:
