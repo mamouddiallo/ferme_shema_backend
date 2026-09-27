@@ -4,6 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.accounts.permissions import EstAuthentifie
+from apps.audit.mixins import AuditUtilisateurMixin
 from apps.ventes.models import Client, Vente
 from apps.ventes.permissions import PeutEncaisser, PeutGererVentes
 from apps.ventes.serializers import ClientSerializer, VenteSerializer
@@ -19,7 +20,7 @@ class ClientViewSet(viewsets.ModelViewSet):
         return [PeutGererVentes()]
 
 
-class VenteViewSet(viewsets.ModelViewSet):
+class VenteViewSet(AuditUtilisateurMixin, viewsets.ModelViewSet):
     serializer_class = VenteSerializer
 
     def get_permissions(self):

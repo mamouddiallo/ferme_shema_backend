@@ -6,6 +6,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from apps.accounts.permissions import EstProprietaire
+from apps.audit.mixins import AuditUtilisateurMixin
 from apps.finance.events import DepenseApprouvee, DepenseRejetee
 from apps.finance.models import Depense, StatutApprobation
 from apps.finance.permissions import PeutConsulterFinance, PeutCreerDepense
@@ -14,7 +15,7 @@ from apps.ventes.models import Vente
 from core.events import BusEvenements
 
 
-class DepenseViewSet(viewsets.ModelViewSet):
+class DepenseViewSet(AuditUtilisateurMixin, viewsets.ModelViewSet):
     serializer_class = DepenseSerializer
 
     def get_permissions(self):
@@ -41,9 +42,15 @@ class DepenseViewSet(viewsets.ModelViewSet):
             raise ValidationError(
                 f"Cette dépense est au statut '{depense.statut_approbation}', pas 'en_attente' — rien à traiter."
             )
-        depense.statut_approbation = nouveau_statut
-        depense.approuve_par = self.request.user
-        depense.save()
+        from apps.audit.threadlocal import clear_current_user, set_current_user
+
+        set_current_user(self.request.user)
+        try:
+            depense.statut_approbation = nouveau_statut
+            depense.approuve_par = self.request.user
+            depense.save()
+        finally:
+            clear_current_user()
 
     @action(detail=True, methods=["post"])
     def approuver(self, request, pk=None):

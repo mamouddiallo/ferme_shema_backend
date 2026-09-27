@@ -5,6 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.accounts.permissions import EstAuthentifie
+from apps.audit.mixins import AuditUtilisateurMixin
 from apps.stock.models import Article, InventairePhysique, MouvementStock
 from apps.stock.permissions import PeutGererStock
 from apps.stock.serializers import ArticleSerializer, InventairePhysiqueSerializer, MouvementStockSerializer
@@ -42,7 +43,7 @@ class ArticleViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class MouvementStockViewSet(viewsets.ModelViewSet):
+class MouvementStockViewSet(AuditUtilisateurMixin, viewsets.ModelViewSet):
     serializer_class = MouvementStockSerializer
 
     def get_permissions(self):
@@ -63,7 +64,7 @@ class MouvementStockViewSet(viewsets.ModelViewSet):
         return context
 
 
-class InventairePhysiqueViewSet(viewsets.ModelViewSet):
+class InventairePhysiqueViewSet(AuditUtilisateurMixin, viewsets.ModelViewSet):
     serializer_class = InventairePhysiqueSerializer
     permission_classes = [PeutGererStock]
 
