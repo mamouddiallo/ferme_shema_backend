@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "rest_framework_simplejwt.token_blacklist",
     "django_celery_results",
+    "corsheaders",
     # Modules métier — un module = un bounded context (§ architecture)
     "apps.accounts",
     "apps.elevage",
@@ -43,6 +44,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -74,6 +76,23 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Modèle utilisateur personnalisé avec rôles métier (§14 de l'organigramme)
 AUTH_USER_MODEL = "accounts.Utilisateur"
 
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 8}},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
+
+# CORS : liste blanche explicite des origines autorisées (le futur frontend),
+# jamais CORS_ALLOW_ALL_ORIGINS=True — une API qui manipule des données
+# financières ne doit être appelable que depuis des origines connues.
+# Format .env : CORS_ALLOWED_ORIGINS=http://localhost:5173,https://app.fermeshema.com
+CORS_ALLOWED_ORIGINS = [
+    origine.strip()
+    for origine in os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+    if origine.strip()
+]
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -96,6 +115,18 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 25,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        # Limites générales de l'API : généreuses, juste pour éviter un abus grossier
+        "anon": "60/min",
+        "user": "300/min",
+        # Limite spécifique à la connexion (anti brute-force) : bien plus stricte,
+        # appliquée en plus des limites générales via LoginRateThrottle
+        "login": "5/min",
+    },
 }
 
 SPECTACULAR_SETTINGS = {
