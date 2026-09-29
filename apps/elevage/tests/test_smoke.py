@@ -1,4 +1,5 @@
 """Test de fumée : vérifie que le projet démarre et que les modèles sont accessibles."""
+
 import pytest
 
 from apps.elevage.models import BandePondeuse, StatutBande
