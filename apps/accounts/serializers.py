@@ -1,3 +1,5 @@
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
@@ -34,6 +36,26 @@ class UtilisateurSerializer(serializers.ModelSerializer):
         model = Utilisateur
         fields = ["id", "username", "email", "role", "is_active", "password", "date_joined"]
         read_only_fields = ["id", "date_joined"]
+
+    def validate_password(self, valeur):
+        # Note : la vérification de similarité avec le username se fait dans
+        # validate() ci-dessous, car elle a besoin des DEUX champs ensemble.
+        return valeur
+
+    def validate(self, attrs):
+        password = attrs.get("password")
+        if password:
+            # Instance temporaire (non sauvegardée) pour que le validateur de
+            # similarité puisse comparer le mot de passe au username/email.
+            utilisateur_temporaire = Utilisateur(
+                username=attrs.get("username", getattr(self.instance, "username", "")),
+                email=attrs.get("email", getattr(self.instance, "email", "")),
+            )
+            try:
+                validate_password(password, user=utilisateur_temporaire)
+            except DjangoValidationError as exc:
+                raise serializers.ValidationError({"password": list(exc.messages)}) from exc
+        return attrs
 
     def create(self, validated_data):
         password = validated_data.pop("password")

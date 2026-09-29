@@ -10,6 +10,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from apps.accounts.models import Utilisateur
 from apps.accounts.permissions import EstGestionnaireOuPlus
 from apps.accounts.serializers import FermeShemaTokenObtainPairSerializer, UtilisateurSerializer
+from apps.accounts.throttling import LoginRateThrottle
 
 
 class FermeShemaTokenObtainPairView(TokenObtainPairView):
@@ -17,6 +18,8 @@ class FermeShemaTokenObtainPairView(TokenObtainPairView):
 
     serializer_class = FermeShemaTokenObtainPairSerializer
     permission_classes = [AllowAny]
+    throttle_classes = [LoginRateThrottle]
+    throttle_scope = "login"
 
 
 class FermeShemaTokenRefreshView(TokenRefreshView):
