@@ -20,8 +20,8 @@ et l'orchestration des conteneurs.
 
 1. Dashboard Render → **New** → **Blueprint**
 2. Sélectionne le dépôt `ferme_shema_backend`, branche `main`
-3. Render lit `render.yaml` et affiche un aperçu des **4 ressources** qu'il
-   va créer : la base PostgreSQL, Redis, le service web, le worker Celery
+3. Render lit `render.yaml` et affiche un aperçu des **3 ressources** qu'il
+   va créer : la base PostgreSQL, Redis et le service web
 4. Avant de cliquer sur "Apply", renseigne les variables marquées `sync: false` :
 
 | Variable | Valeur à mettre |

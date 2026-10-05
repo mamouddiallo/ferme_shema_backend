@@ -1,14 +1,14 @@
 # Blueprint Render — Infrastructure as Code.
 # Déploiement : Dashboard Render → New → Blueprint → sélectionner ce dépôt.
-# Render lit ce fichier et crée automatiquement les 4 ressources ci-dessous.
+# Render lit ce fichier et crée automatiquement les 3 ressources ci-dessous.
 #
 # Toute variable marquée `sync: false` doit être saisie une fois, à la main,
 # dans le Dashboard Render après la création du Blueprint — jamais commitée.
 #
 # Note : un envVarGroup ne peut contenir que des valeurs simples (value/sync),
 # jamais de référence fromDatabase/fromService — celles-ci doivent être
-# déclarées directement dans chaque service qui en a besoin (d'où leur
-# répétition entre "web" et "worker" ci-dessous).
+# déclarées directement dans le service qui en a besoin. Si un worker Celery
+# est ajouté plus tard, ces références devront y être répétées.
 
 envVarGroups:
   - name: ferme-shema-env
@@ -42,40 +42,6 @@ services:
     plan: starter
     healthCheckPath: /health/
     preDeployCommand: python manage.py migrate --noinput
-    envVars:
-      - fromGroup: ferme-shema-env
-      - key: DB_NAME
-        fromDatabase:
-          name: ferme-shema-db
-          property: database
-      - key: DB_USER
-        fromDatabase:
-          name: ferme-shema-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: ferme-shema-db
-          property: password
-      - key: DB_HOST
-        fromDatabase:
-          name: ferme-shema-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: ferme-shema-db
-          property: port
-      - key: REDIS_URL
-        fromService:
-          name: ferme-shema-redis
-          type: keyvalue
-          property: connectionString
-
-  - type: worker
-    name: ferme-shema-celery
-    runtime: docker
-    dockerfilePath: ./Dockerfile
-    dockerCommand: celery -A config worker --loglevel=info
-    plan: starter
     envVars:
       - fromGroup: ferme-shema-env
       - key: DB_NAME
