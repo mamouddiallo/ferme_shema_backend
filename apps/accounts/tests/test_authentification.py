@@ -37,6 +37,29 @@ def ouvrier(db):
 
 
 @pytest.mark.django_db
+class TestCreationSuperuser:
+    def test_superuser_recoit_le_role_proprietaire_par_defaut(self):
+        """
+        Régression : `createsuperuser` ne demandant pas le rôle métier, un
+        superuser se retrouvait avec role="" et se faisait refuser l'accès
+        par toutes nos permissions par rôle, malgré is_superuser=True.
+        """
+        u = Utilisateur.objects.create_superuser(
+            username="admin_regression", email="admin_regression@test.local", password="motdepasse123"
+        )
+        assert u.role == RoleUtilisateur.PROPRIETAIRE
+
+    def test_role_explicite_est_respecte_si_fourni(self):
+        u = Utilisateur.objects.create_superuser(
+            username="admin_gest",
+            email="admin_gest@test.local",
+            password="motdepasse123",
+            role=RoleUtilisateur.GESTIONNAIRE,
+        )
+        assert u.role == RoleUtilisateur.GESTIONNAIRE
+
+
+@pytest.mark.django_db
 class TestAuthentification:
     def test_login_renvoie_access_et_refresh_avec_role(self, api_client, gestionnaire):
         response = api_client.post(
