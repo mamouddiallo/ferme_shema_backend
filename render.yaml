@@ -1,0 +1,112 @@
+# Blueprint Render — Infrastructure as Code.
+# Déploiement : Dashboard Render → New → Blueprint → sélectionner ce dépôt.
+# Render lit ce fichier et crée automatiquement les 4 ressources ci-dessous.
+#
+# Toute variable marquée `sync: false` doit être saisie une fois, à la main,
+# dans le Dashboard Render après la création du Blueprint — jamais commitée.
+#
+# Note : un envVarGroup ne peut contenir que des valeurs simples (value/sync),
+# jamais de référence fromDatabase/fromService — celles-ci doivent être
+# déclarées directement dans chaque service qui en a besoin (d'où leur
+# répétition entre "web" et "worker" ci-dessous).
+
+envVarGroups:
+  - name: ferme-shema-env
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.prod
+      - key: DJANGO_SECRET_KEY
+        sync: false # Génère-la avec : python -c "import secrets; print(secrets.token_urlsafe(50))"
+      - key: DJANGO_ALLOWED_HOSTS
+        sync: false # ex: ferme-shema-api.onrender.com (ou ton domaine personnalisé)
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false # URL réelle du futur frontend, ex: https://app.fermeshema.com
+      - key: SEUIL_ALERTE_MORTALITE_PCT
+        value: "5.0"
+      - key: SENTRY_DSN
+        sync: false # Optionnel — laisser vide désactive Sentry proprement
+
+databases:
+  - name: ferme-shema-db
+    databaseName: ferme_shema_prod
+    user: ferme_shema_user
+    plan: free # ATTENTION : vérifier la politique actuelle du plan gratuit
+    # Postgres sur render.com/pricing avant la mise en production réelle —
+    # passer à "starter" avant le lancement si nécessaire.
+
+services:
+  - type: web
+    name: ferme-shema-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    healthCheckPath: /health/
+    preDeployCommand: python manage.py migrate --noinput
+    envVars:
+      - fromGroup: ferme-shema-env
+      - key: DB_NAME
+        fromDatabase:
+          name: ferme-shema-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: ferme-shema-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: ferme-shema-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: ferme-shema-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: ferme-shema-db
+          property: port
+      - key: REDIS_URL
+        fromService:
+          name: ferme-shema-redis
+          type: keyvalue
+          property: connectionString
+
+  - type: worker
+    name: ferme-shema-celery
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: celery -A config worker --loglevel=info
+    plan: starter
+    envVars:
+      - fromGroup: ferme-shema-env
+      - key: DB_NAME
+        fromDatabase:
+          name: ferme-shema-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: ferme-shema-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: ferme-shema-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: ferme-shema-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: ferme-shema-db
+          property: port
+      - key: REDIS_URL
+        fromService:
+          name: ferme-shema-redis
+          type: keyvalue
+          property: connectionString
+
+  - type: keyvalue
+    name: ferme-shema-redis
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: [] # Liste vide = aucun accès public depuis internet ;
+    # les connexions internes via fromService (ci-dessus) restent fonctionnelles.

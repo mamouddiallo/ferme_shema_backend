@@ -85,6 +85,10 @@ class InventairePhysique(models.Model):
         db_table = "stock_inventaires_physiques"
         constraints = [
             models.UniqueConstraint(fields=["article", "date_inventaire"], name="uq_inventaire_article_date"),
+            models.CheckConstraint(
+                condition=models.Q(quantite_theorique=F("quantite_physique")) | models.Q(justification__isnull=False),
+                name="chk_justification_si_ecart",
+            ),
         ]
 
     def __str__(self) -> str:
