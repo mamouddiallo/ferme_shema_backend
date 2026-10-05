@@ -1,6 +1,7 @@
 # Blueprint Render — Infrastructure as Code.
 # Déploiement : Dashboard Render → New → Blueprint → sélectionner ce dépôt.
 # Render lit ce fichier et crée automatiquement les 3 ressources ci-dessous.
+# CONFIGURATION GRATUITE, POUR TESTS : voir docs/DEPLOIEMENT_RENDER.md.
 #
 # Toute variable marquée `sync: false` doit être saisie une fois, à la main,
 # dans le Dashboard Render après la création du Blueprint — jamais commitée.
@@ -25,23 +26,29 @@ envVarGroups:
         value: "5.0"
       - key: SENTRY_DSN
         sync: false # Optionnel — laisser vide désactive Sentry proprement
+      - key: DJANGO_SUPERUSER_USERNAME
+        sync: false # Compte propriétaire créé au premier démarrage
+      - key: DJANGO_SUPERUSER_EMAIL
+        sync: false
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false # À supprimer du Dashboard après la première connexion réussie
 
 databases:
   - name: ferme-shema-db
     databaseName: ferme_shema_prod
     user: ferme_shema_user
-    plan: free # ATTENTION : vérifier la politique actuelle du plan gratuit
-    # Postgres sur render.com/pricing avant la mise en production réelle —
-    # passer à "starter" avant le lancement si nécessaire.
+    plan: free # Expire 30 jours après création (14 jours de grâce, puis suppression),
+    # sans sauvegarde : réservé aux tests. Passer à un plan payant avant d'y mettre
+    # de vraies données.
 
 services:
   - type: web
     name: ferme-shema-api
     runtime: docker
     dockerfilePath: ./Dockerfile
-    plan: starter
+    dockerCommand: "/bin/bash -c 'python manage.py migrate --noinput && (python manage.py createsuperuser --noinput || true) && gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2'"
+    plan: free
     healthCheckPath: /health/
-    preDeployCommand: python manage.py migrate --noinput
     envVars:
       - fromGroup: ferme-shema-env
       - key: DB_NAME
@@ -72,7 +79,7 @@ services:
 
   - type: keyvalue
     name: ferme-shema-redis
-    plan: starter
+    plan: free
     maxmemoryPolicy: allkeys-lru
     ipAllowList: [] # Liste vide = aucun accès public depuis internet ;
     # les connexions internes via fromService (ci-dessus) restent fonctionnelles.
