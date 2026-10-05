@@ -1,3 +1,4 @@
 -r base.txt
 
 sentry-sdk>=2.0
+whitenoise>=6.7
