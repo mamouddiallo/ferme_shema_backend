@@ -20,7 +20,7 @@ if not ALLOWED_HOSTS or ALLOWED_HOSTS == [""]:
 # connexion avec une erreur CSRF malgré un domaine pourtant dans ALLOWED_HOSTS.
 CSRF_TRUSTED_ORIGINS = [f"https://{host}" for host in ALLOWED_HOSTS]
 
-if SECRET_KEY in ("insecure-dev-key-change-me", "build-stage-uniquement"):  # noqa: F405
+if SECRET_KEY == "insecure-dev-key-change-me":  # noqa: F405
     raise RuntimeError("DJANGO_SECRET_KEY doit être défini explicitement en production.")
 
 # Render (et Caddy, côté VPS) déchiffrent le HTTPS puis transmettent en HTTP
