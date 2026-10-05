@@ -167,6 +167,7 @@ class TestCompteExploitationMensuel:
         Vente.objects.create(
             client=client,
             utilisateur=gestionnaire,
+            date_vente="2026-09-22T10:00:00Z",
             mode_paiement="especes",
             montant_total=100000,
             montant_encaisse=100000,
